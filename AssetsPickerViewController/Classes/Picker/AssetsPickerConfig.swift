@@ -13,9 +13,13 @@ open class AssetsPickerConfig {
 
     // MARK: - Localized Strings Config
 
-    open static var customStringConfig: AssetsPickerCustomStringConfig? = nil
+    public static var customStringConfig: AssetsPickerCustomStringConfig? = nil
     
     // MARK: - Album Config
+    
+    /// Static appearances
+    public static var statusBarStyle: UIStatusBarStyle = .default
+    public static var defaultCheckmarkColor: UIColor = UIColor(red: 0.078, green: 0.435, blue: 0.875, alpha: 1)
 
     /// Set selected album at initial load.
     open var albumDefaultType: PHAssetCollectionSubtype = .smartAlbumUserLibrary

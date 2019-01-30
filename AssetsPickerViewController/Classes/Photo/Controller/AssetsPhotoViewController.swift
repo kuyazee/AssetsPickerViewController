@@ -11,9 +11,14 @@ import Photos
 import PhotosUI
 import TinyLog
 import Device
+import SnapKit
 
 // MARK: - AssetsPhotoViewController
 open class AssetsPhotoViewController: UIViewController {
+    
+    override open var preferredStatusBarStyle: UIStatusBarStyle {
+        return AssetsPickerConfig.statusBarStyle
+    }
     
     // MARK: Properties
     var pickerConfig: AssetsPickerConfig!
@@ -32,8 +37,12 @@ open class AssetsPhotoViewController: UIViewController {
         let buttonItem = UIBarButtonItem(title: String(key: "Done"), style: .plain, target: self, action: #selector(pressedDone(button:)))
         return buttonItem
     }()
-    fileprivate let emptyView: AssetsEmptyView = AssetsEmptyView.newAutoLayout()
-    fileprivate let noPermissionView: AssetsNoPermissionView = AssetsNoPermissionView.newAutoLayout()
+    fileprivate let emptyView: AssetsEmptyView = {
+        return AssetsEmptyView()
+    }()
+    fileprivate let noPermissionView: AssetsNoPermissionView = {
+        return AssetsNoPermissionView()
+    }()
     fileprivate var delegate: AssetsPickerViewControllerDelegate? {
         return (navigationController as? AssetsPickerViewController)?.pickerDelegate
     }
@@ -46,13 +55,12 @@ open class AssetsPhotoViewController: UIViewController {
     fileprivate var selectedArray = [PHAsset]()
     fileprivate var selectedMap = [String: PHAsset]()
     
-    fileprivate var didSetupConstraints = false
     fileprivate var didSetInitialPosition: Bool = false
     
     fileprivate var isPortrait: Bool = true
     
-    var leadingConstraint: NSLayoutConstraint?
-    var trailingConstraint: NSLayoutConstraint?
+    var leadingConstraint: LayoutConstraint?
+    var trailingConstraint: LayoutConstraint?
     
     fileprivate lazy var collectionView: UICollectionView = {
         
@@ -61,7 +69,6 @@ open class AssetsPhotoViewController: UIViewController {
         layout.scrollDirection = .vertical
         
         let view = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        view.configureForAutoLayout()
         view.allowsMultipleSelection = true
         view.alwaysBounceVertical = true
         view.register(self.pickerConfig.assetCellType, forCellWithReuseIdentifier: self.cellReuseIdentifier)
@@ -108,6 +115,7 @@ open class AssetsPhotoViewController: UIViewController {
         
         setupCommon()
         setupBarButtonItems()
+        setupCollectionView()
         
         updateEmptyView(count: 0)
         updateNoPermissionView()
@@ -155,26 +163,6 @@ open class AssetsPhotoViewController: UIViewController {
             }
             didSetInitialPosition = true
         }
-    }
-    
-    override open func updateViewConstraints() {
-        if !didSetupConstraints {
-            collectionView.autoPinEdge(toSuperviewEdge: .top)
-            
-            if #available(iOS 11.0, *) {
-                leadingConstraint = collectionView.autoPinEdge(toSuperviewEdge: .leading, withInset: view.safeAreaInsets.left)
-                trailingConstraint = collectionView.autoPinEdge(toSuperviewEdge: .trailing, withInset: view.safeAreaInsets.right)
-            } else {
-                leadingConstraint = collectionView.autoPinEdge(toSuperviewEdge: .leading)
-                trailingConstraint = collectionView.autoPinEdge(toSuperviewEdge: .trailing)
-            }
-            collectionView.autoPinEdge(toSuperviewEdge: .bottom)
-            
-            emptyView.autoPinEdgesToSuperviewEdges()
-            noPermissionView.autoPinEdgesToSuperviewEdges()
-            didSetupConstraints = true
-        }
-        super.updateViewConstraints()
     }
     
     open func deselectAll() {
@@ -253,6 +241,30 @@ extension AssetsPhotoViewController {
         navigationItem.leftBarButtonItem = cancelButtonItem
         navigationItem.rightBarButtonItem = doneButtonItem
         doneButtonItem.isEnabled = false
+    }
+    
+    func setupCollectionView() {
+        
+        collectionView.snp.makeConstraints { (make) in
+            make.top.equalToSuperview()
+            
+            if #available(iOS 11.0, *) {
+                leadingConstraint = make.leading.equalToSuperview().inset(view.safeAreaInsets.left).constraint.layoutConstraints.first
+                trailingConstraint = make.trailing.equalToSuperview().inset(view.safeAreaInsets.right).constraint.layoutConstraints.first
+            } else {
+                leadingConstraint = make.leading.equalToSuperview().constraint.layoutConstraints.first
+                trailingConstraint = make.trailing.equalToSuperview().constraint.layoutConstraints.first
+            }
+            make.bottom.equalToSuperview()
+        }
+        
+        emptyView.snp.makeConstraints { (make) in
+            make.edges.equalToSuperview()
+        }
+        
+        noPermissionView.snp.makeConstraints { (make) in
+            make.edges.equalToSuperview()
+        }
     }
     
     func setupAssets() {
@@ -363,7 +375,11 @@ extension AssetsPhotoViewController {
                 }
             }
             if AssetsManager.shared.assetArray.count > 0 {
-                collectionView.scrollToItem(at: IndexPath(row: AssetsManager.shared.assetArray.count - 1, section: 0), at: .bottom, animated: false)
+                if pickerConfig.assetsIsScrollToBottom == true {
+                    collectionView.scrollToItem(at: IndexPath(row: AssetsManager.shared.assetArray.count - 1, section: 0), at: .bottom, animated: false)
+                } else {
+                    collectionView.scrollToItem(at: IndexPath(row: 0, section: 0), at: .bottom, animated: false)
+                }
             }
         }
     }
